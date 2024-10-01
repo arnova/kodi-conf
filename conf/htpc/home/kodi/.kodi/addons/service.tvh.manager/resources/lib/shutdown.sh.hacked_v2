@@ -1,0 +1,28 @@
+#! /bin/sh
+
+echo 0 > /sys/class/rtc/rtc0/wakealarm
+echo $1 > /sys/class/rtc/rtc0/wakealarm
+
+if [ "$2" -eq 1 ]; then
+  if [ -e /tmp/tvhm_lock ]; then
+    LAST_TIME="$(cat /tmp/tvhm_lock)"
+  else
+    LAST_TIME=0
+  fi
+
+  CUR_TIME="$(date +%s)"
+
+  if [ $CUR_TIME -gt $((LAST_TIME + 60)) ]; then
+    #shutdown -h now "TVHManager shutdown the system"
+
+    #systemctl suspend
+    pm-suspend
+#    reboot
+
+    date +%s > /tmp/tvhm_lock
+#    sleep 10
+  fi
+fi
+
+sleep 1
+exit 0

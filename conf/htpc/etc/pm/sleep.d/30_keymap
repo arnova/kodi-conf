@@ -1,0 +1,14 @@
+#!/bin/sh
+
+# Disable inputlirc on suspend
+
+case "$1" in
+#  suspend|hibernate)
+#  /etc/init.d/inputlirc stop
+#  ;;
+
+  resume|thaw)
+    /usr/bin/ir-keytable --write=/etc/rc_keymaps/rc6_mce --device=/dev/input/mceremote &
+    ;;
+esac
+

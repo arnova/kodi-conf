@@ -1,0 +1,15 @@
+[Unit]
+Description=Kodi-standalone-flatpak (GBM)
+After=systemd-user-sessions.service network.target sound.target network-online.target
+
+[Service]
+User=kodi
+Group=kodi
+PAMName=login
+Type=simple
+ExecStart=/usr/bin/flatpak run --filesystem=/run/udev:ro --filesystem=home:ro tv.kodi.Kodi --standalone --windowing=gbm
+ExecStop=/usr/bin/flatpak kill tv.kodi.Kodi
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

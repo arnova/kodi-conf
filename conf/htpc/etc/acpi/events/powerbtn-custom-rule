@@ -1,0 +1,2 @@
+event=LNXPWRBN:00
+action=/etc/acpi/powerbtn-custom-handler.sh

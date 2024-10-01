@@ -1,0 +1,26 @@
+#!/bin/sh
+
+# Suspend script for PCTV stick. Should be put in /etc/pm/sleep.d/
+
+case "$1" in
+  suspend|hibernate)
+    /etc/init.d/tvheadend stop
+#    sleep 2
+
+    rmmod em28xx_rc
+    rmmod em28xx_dvb
+    rmmod em28xx
+    rmmod si2157
+    rmmod si2168
+    ;;
+
+  resume|thaw)
+    modprobe si2157
+    modprobe si2168
+    modprobe em28xx
+#    sleep 2
+
+    /etc/init.d/tvheadend start
+    ;;
+esac
+

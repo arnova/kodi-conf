@@ -1,0 +1,32 @@
+# -*- coding: utf-8 -*-
+import sys, os
+import xbmc, xbmcaddon, xbmcvfs
+import time
+
+WD_FILE=xbmcvfs.translatePath('special://temp/.watchdog')
+
+def writeLog(message, level=xbmc.LOGDEBUG):
+    xbmc.log('[%s] %s' % (xbmcaddon.Addon().getAddonInfo('id'), message.encode('utf-8')), level)
+
+def updateWDTime():
+    # Get current time
+    ctime = str(int(time.time()))
+
+    # Write new lock file time
+    with open(WD_FILE, 'w') as fHandle:
+        fHandle.write(ctime)
+
+    writeLog('Updated watchdog time to %s' % (ctime))
+
+if __name__ == '__main__':
+        ### START SERVICE LOOP ###
+        writeLog('Starting service', level=xbmc.LOGINFO)
+
+        mon = xbmc.Monitor()
+        while (1):
+            updateWDTime()
+            if mon.waitForAbort(60):
+                os.remove(WD_FILE)
+                break
+
+

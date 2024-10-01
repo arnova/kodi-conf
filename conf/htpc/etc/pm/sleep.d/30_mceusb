@@ -1,0 +1,14 @@
+#!/bin/sh
+
+# Remove the mceusb module during suspend so that it cannot generate input events directly after resume:
+
+case "$1" in
+  suspend|hibernate)
+    rmmod mceusb
+    ;;
+
+  resume|thaw)
+    modprobe mceusb
+    ;;
+esac
+

@@ -1,0 +1,551 @@
+#!/bin/sh
+
+MY_VERSION="2.00-BETA5"
+# ----------------------------------------------------------------------------------------------------------------------
+# backupcfg - Backup config of current system
+# Last update: July 28, 2019
+# (C) Copyright 2011-2019 by Arno van Amersfoort
+# Homepage              : http://rocky.eld.leidenuniv.nl/
+# Email                 : a r n o v a AT r o c k y DOT e l d DOT l e i d e n u n i v DOT n l
+#                         (note: you must remove all spaces and substitute the @ and the . at the proper locations!)
+# ----------------------------------------------------------------------------------------------------------------------
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# version 2 as published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+# ----------------------------------------------------------------------------------------------------------------------
+
+CONF_FILE="/etc/backupcfg.conf"
+VERBOSE=0
+
+EOL='
+'
+TAB=$(printf '\t')
+CUR_SNAPSHOT_DIR=""
+
+# Default to use snapshots, NOT tar (may be overwritten in config)
+USE_TAR=0
+
+# Dry-run not fully implemented yet
+DRY_RUN=0
+
+# Default retention settings
+DAILY_KEEP=31
+MONTHLY_KEEP=12
+YEARLY_KEEP=5
+
+check_command()
+{
+  local path IFS
+
+  IFS=' '
+  for cmd in $*; do
+    if [ -n "$(which "$cmd" 2>/dev/null)" ]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+
+# Check whether a binary is available and if not, generate an error and stop program execution
+check_command_error()
+{
+  local IFS=' '
+
+  if ! check_command "$@"; then
+    printf "\033[40m\033[1;31mERROR  : Command(s) \"$(echo "$@" |tr ' ' '|')\" is/are not available!\033[0m\n" >&2
+    printf "\033[40m\033[1;31m         Please investigate. Quitting...\033[0m\n" >&2
+    echo ""
+    exit 1
+  fi
+}
+
+
+sanity_check()
+{
+  if [ -z "$BACKUP_DIR" ]; then
+    echo "ERROR: BACKUP_DIR is not specified in the config file!" >&2
+    exit 1
+  fi
+
+  if [ ! -d "$BACKUP_DIR" ] || ! cd "$BACKUP_DIR"; then
+    echo "ERROR: $BACKUP_DIR does NOT exist or is not accessible, please investigate!" >&2
+    exit 1
+  fi
+
+  if [ -z "$BACKUP_SOURCES" ]; then
+    echo "WARNING: No items in BACKUP_SOURCES! Nothing to do" >&2
+    exit 1
+  fi
+
+  if [ "$USE_TAR" = "1" ]; then
+    check_command_error tar
+    check_command_error gzip
+  else
+    check_command_error rsync
+  fi
+}
+
+
+ctrlc_handler()
+{
+  stty intr ^C    # Back to normal
+
+  # Cleanup
+  if [ -n "$CUR_SNAPSHOT_DIR" ]; then
+    rm -rfv "$CUR_SNAPSHOT_DIR"
+  fi
+
+  exit 1       # Yep, I meant to do that... Kill/hang the shell.
+}
+
+
+# $1 = dir + filename
+# $2 = keep count
+cleanup_old_tgz()
+{
+  local COUNT=0
+  local DIR="$(dirname $1)"
+  local FN="$(basename $1)"
+  local KEEP="$2"
+
+  # FIXME: Don't use stat and get date/time from filename
+  IFS=$EOL
+  find "$DIR/" -maxdepth 1 -name "${FN}[-_.]*.tgz" |xargs stat -c "%Y${TAB}%n" |sort -r |while read LINE; do
+    COUNT=$((COUNT + 1))
+
+    if [ $COUNT -gt $KEEP ]; then
+      FN="$(echo "$LINE" |cut -f2)"
+
+      echo "* Old tgz cleanup: $FN"
+      if [ $VERBOSE -eq 1 ]; then
+        rm -vf "$FN"
+      else
+        rm -f "$FN"
+      fi
+    fi
+  done
+}
+
+
+# $1 = dir + filename
+cleanup_old_snapshots()
+{
+  local BACKUP_DIR="$1"
+  local DAILY_COUNT=0 MONTHLY_COUNT=0 YEARLY_COUNT=0 MONTH_LAST=0 YEAR_LAST=0
+  local RETVAL=0
+
+  if [ -z $DAILY_KEEP -o $DAILY_KEEP -le 0 ]; then
+    echo "ERROR: Bad or missing config variable DAILY_KEEP" >&2
+    return 1
+  fi
+
+  if [ -z $MONTHLY_KEEP -o $MONTHLY_KEEP -le 0 ]; then
+    echo "ERROR: Bad or missing config variable MONTHLY_KEEP" >&2
+    return 1
+  fi
+
+  if [ -z $YEARLY_KEEP -o $YEARLY_KEEP -le 0 ]; then
+    echo "ERROR: Bad or missing config variable YEARLY_KEEP" >&2
+    return 1
+  fi
+
+  echo "* Performing snapshot cleanup for: $BACKUP_DIR/"
+  echo "* Retention config: Dailies=$DAILY_KEEP Monthlies=$MONTHLY_KEEP Yearlies=$YEARLY_KEEP"
+
+  SNAPSHOT_DIR_LIST="$(find "$BACKUP_DIR/" -maxdepth 1 -mindepth 1 -type d |grep -E '/snapshot_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{4}$' |sort -r)"
+  COUNT_TOTAL="$(echo "$SNAPSHOT_DIR_LIST" |wc -l)"
+
+  # Make sure there are sufficient backups
+  if [ $COUNT_TOTAL -le 3 ]; then
+    echo "NOTE: Not performing cleanup due to low amount of existing backups($COUNT_TOTAL)"
+    return 0
+  fi
+
+  COUNT=0
+  IFS=$EOL
+  for SNAPSHOT_DIR in $SNAPSHOT_DIR_LIST; do
+    MTIME="$(echo "$SNAPSHOT_DIR" |sed s,'.*/snapshot_',,)"
+
+    if [ -z "$MTIME" ]; then
+      echo "ASSERTION FAILURE: EMPTY MTIME IN SNAPSHOT DIR \"$SNAPSHOT_DIR\"" >&2
+      return 1
+    fi
+
+    COUNT=$((COUNT + 1))
+
+    YEAR_MTIME="$(echo "$MTIME" |cut -f1 -d'-')"
+    MONTH_MTIME="$(echo "$MTIME" |cut -f2 -d'-')"
+    DIR_NAME="$(basename "$SNAPSHOT_DIR")"
+
+    #FIXME: _${TIME}
+
+    KEEP=0
+    if [ $DAILY_COUNT -lt $DAILY_KEEP ]; then
+      DAILY_COUNT=$((DAILY_COUNT + 1))
+      # We want to keep this day
+      echo "  Keep daily($DAILY_COUNT): $DIR_NAME"
+      KEEP=1
+    fi
+
+    if [ $KEEP -eq 0 -a $MONTHLY_COUNT -lt $MONTHLY_KEEP ]; then
+      #TODO: Review the logic below
+      if [ $MONTH_MTIME -ne $MONTH_LAST -o $YEAR_MTIME -ne $YEAR_LAST ] || [ $COUNT -eq $COUNT_TOTAL ]; then
+        # We want to keep this month
+        MONTHLY_COUNT=$((MONTHLY_COUNT + 1))
+        MONTH_LAST=$MONTH_MTIME
+
+        echo "  Keep monthly($MONTHLY_COUNT): $DIR_NAME"
+        YEAR_LAST=$YEAR_MTIME
+        KEEP=1
+      fi
+    fi
+
+    if [ $KEEP -eq 0 -a $YEARLY_COUNT -lt $YEARLY_KEEP ]; then
+      if [ $YEAR_MTIME -ne $YEAR_LAST ] || [ $COUNT -eq $COUNT_TOTAL ]; then
+        YEARLY_COUNT=$((YEARLY_COUNT + 1))
+        YEAR_LAST=$YEAR_MTIME
+
+        # We want to keep this year
+        echo "  Keep yearly($YEARLY_COUNT): $DIR_NAME"
+        KEEP=1
+      fi
+    fi
+
+    if [ $KEEP -eq 0 ]; then
+      echo "  REMOVE      : $DIR_NAME"
+      echo "   rm -rf $SNAPSHOT_DIR"
+
+      if [ $DRY_RUN -eq 0 ]; then
+        if ! rm -rf "$SNAPSHOT_DIR"; then
+          RETVAL=1
+        fi
+      fi
+    fi
+  done
+
+  return $RETVAL
+}
+
+
+# $1 = Source file/folder, $2+ = Additional options for tar
+tgz_files()
+{
+  local SOURCE="$1"
+  shift
+  local OPTIONS=$*
+  local FN
+  local DIR
+  local TAR_OPTIONS=""
+  local KEEP_COUNT=""
+  local TGZ_NAME=""
+  local retval=0
+
+  if [ -d "$SOURCE" ]; then
+    FN="."
+    DIR="$SOURCE"
+  else
+    FN="$(basename "$SOURCE")"
+    DIR="$(dirname "$SOURCE")"
+  fi
+
+  if [ ! -d "$DIR" ]; then
+    printf "\033[40m\033[1;31mWARNING: Directory $DIR (in $SOURCE) does NOT exist! Skipping...\n\033[0m" >&2
+    ARCHIVE_SKIPPED="$ARCHIVE_SKIPPED $1"
+    return 1
+  fi
+
+  if ! cd "$DIR"; then
+    echo "ERROR: Failed to chdir to: $DIR" >&2
+    return 1
+  fi
+
+  IFS=','
+  for OPTION in $OPTIONS; do
+    OPT_NAME="$(echo "$OPTION" |cut -d= -f1)"
+    OPT_VAL="$(echo "$OPTION" |cut -d= -f2 -s)"
+
+    case "$OPT_NAME" in
+      --exdir)  TAR_OPTIONS="${TAR_OPTIONS}${TAR_OPTIONS:+ }--exclude=*/${OPT_VAL}*"
+                ;;
+    --exclude)  TAR_OPTIONS="${TAR_OPTIONS}${TAR_OPTIONS:+ }$OPTION"
+                ;;
+       --keep)  KEEP_COUNT="$OPT_VAL"
+                ;;
+       --name)  TGZ_NAME="$OPT_VAL"
+                ;;
+            *)  echo "ERROR: Unknown option \"$OPT_NAME\""
+                return 1
+                ;;
+    esac
+  done
+
+  if [ -z "$KEEP_COUNT" ]; then
+    KEEP_COUNT=$GLOBAL_KEEP
+  fi
+
+  if [ -z "$TGZ_NAME" ]; then
+    TGZ_NAME="$(echo "$SOURCE" |sed -r -e 's,/$,,' -e 's,^/,,' -e 's,/\.?,_,g')"
+  fi
+
+  TARGET_NAME="$BACKUP_DIR/$TGZ_NAME"
+  echo "* Archiving $SOURCE/ to ${TARGET_NAME}_${CUR_DATE}.tgz"
+
+  if [ $VERBOSE -eq 1 ]; then
+    TAR_OPTIONS="${TAR_OPTIONS}${TAR_OPTIONS:+ }-v"
+  fi
+
+  IFS=' '
+  tar -czf "$TARGET_NAME.tgz" $TAR_OPTIONS --warning=no-file-ignore --warning=no-file-changed "$FN"
+#  eval tar cfz --warning=no-file-ignore --warning=no-file-changed $BIN_OPTIONS "$TARGET_NAME.tgz" "$FN"
+#  tar cfz "$2.tgz" "$1/" $4 $5 $6 $7 $8 $9 2>&1 |grep -v -e '^tar: Removing leading' -e 'socket ignored$'
+  retval=$?
+
+  if [ -f "${TARGET_NAME}.tgz" ]; then
+    mv "${TARGET_NAME}.tgz" "${TARGET_NAME}_${CUR_DATE}.tgz"
+#    echo "  $(ls -lh "${TARGET_NAME}_${CUR_DATE}.tgz" |cut -d' ' -f-4 --complement)"
+
+    cleanup_old_tgz "$TARGET_NAME" $KEEP_COUNT
+  fi
+
+#  echo ""
+
+  return $retval
+}
+
+
+# $1 = Source file/folder
+snapshot_files()
+{
+  local SOURCE="$1"
+  local SNAPSHOT_SUBDIR="$2"
+  shift
+  shift
+  local OPTIONS=$*
+  local retval=0
+  local RSYNC_LINE="--itemize-changes"
+
+  if [ -f "$SOURCE" ]; then
+    if [ -n "$LAST_SNAPSHOT_DIR" -a -f "${LAST_SNAPSHOT_DIR}/$(basename $SOURCE)" ]; then
+      RSYNC_LINE="$RSYNC_LINE --checksum --link-dest=${LAST_SNAPSHOT_DIR}/"
+    fi
+  else
+    if [ ! -d "$SOURCE" ]; then
+      printf "\033[40m\033[1;31mWARNING: Directory $SOURCE does NOT exist! Skipping...\n\033[0m" >&2
+      ARCHIVE_SKIPPED="$ARCHIVE_SKIPPED $1"
+      return 1
+    fi
+
+    if ! cd "$SOURCE"; then
+      echo "ERROR: Failed to chdir to: $SOURCE" >&2
+      return 1
+    fi
+
+    if [ ! -d "$SNAPSHOT_SUBDIR" ]; then
+      if ! mkdir -p "$SNAPSHOT_SUBDIR"; then
+        echo "ERROR: Failed to mkdir $SNAPSHOT_SUBDIR" >&2
+        return 1
+      fi
+    fi
+
+    RSYNC_LINE="$RSYNC_LINE -ax --hard-links --delete"
+
+    if [ -n "$LAST_SNAPSHOT_DIR" -a -d "${LAST_SNAPSHOT_DIR}${SOURCE}" ]; then
+      RSYNC_LINE="$RSYNC_LINE --link-dest=${LAST_SNAPSHOT_DIR}${SOURCE}/"
+    fi
+  fi
+
+  IFS=','
+  for OPTION in $OPTIONS; do
+    OPT_NAME="$(echo "$OPTION" |cut -d= -f1)"
+    OPT_VAL="$(echo "$OPTION" |cut -d= -f2 -s)"
+
+    case "$OPT_NAME" in
+      --exdir)  RSYNC_LINE="${RSYNC_LINE} --exclude ${OPT_VAL}/"
+                ;;
+    --exclude)  RSYNC_LINE="${RSYNC_LINE} --exclude ${OPT_VAL}"
+                ;;
+            *)  echo "ERROR: Unknown option \"$OPT_NAME\""
+                return 1
+                ;;
+    esac
+  done
+
+  if [ -f "$SOURCE" ]; then
+    RSYNC_LINE="$RSYNC_LINE -- $SOURCE $SNAPSHOT_SUBDIR/"
+    echo "* Archiving(snapshot) $SOURCE to $SNAPSHOT_SUBDIR/$(basename $SOURCE)"
+  else
+    RSYNC_LINE="$RSYNC_LINE -- $SOURCE/ $SNAPSHOT_SUBDIR/"
+    echo "* Archiving(snapshot) $SOURCE/ to $SNAPSHOT_SUBDIR/"
+  fi
+
+  if [ $VERBOSE -eq 1 ]; then
+    echo "* eval rsync $RSYNC_LINE"
+  fi
+
+  unset IFS
+  result="$(eval rsync $RSYNC_LINE |grep '^>f')"
+  retval=$?
+
+  if [ $VERBOSE -eq 1 -a -n "$result" ]; then
+    echo "$result"
+  fi
+
+  FILE_COUNT="$(echo "$result" |grep '^>f' --count)"
+
+  echo "  $FILE_COUNT files updated"
+
+  return $retval
+}
+
+
+# $1 = Command $2 = Target file, $3+ = Additional options
+archive_command()
+{
+  local COMMAND="$1"
+  local TARGET_NAME="$2"
+  shift
+  shift
+  local OPTIONS=$*
+  local TMP_FILE="/tmp/$TARGET_NAME"
+
+  eval $COMMAND >"$TMP_FILE"
+
+  if [ ! -f "$TMP_FILE" ]; then
+    echo "ERROR: Failed to create: $TMP_FILE" >&2
+    return 1
+  fi
+
+  if [ "$USE_TAR" = "1" ]; then
+    tgz_files "$TMP_FILE" --name="$TARGET_NAME" $OPTIONS
+  else
+    snapshot_files "$TMP_FILE" "$CUR_SNAPSHOT_DIR" $OPTIONS
+  fi
+
+  rm -f "$TMP_FILE"
+
+  return 0
+}
+
+
+# Mainline
+##########
+echo "backupcfg v$MY_VERSION - Backup (system) config folders"
+echo "(C) Copyright 2011-2019 by Arno van Amersfoort"
+echo "----------------------------------------------------------"
+
+if [ -z "$CONF_FILE" -o ! -e "$CONF_FILE" ]; then
+  echo "ERROR: Missing config file ($CONF_FILE)!" >&2
+  echo "" >&2
+  exit 1
+fi
+
+# Source config file
+. "$CONF_FILE"
+
+# Check if environent is sane
+sanity_check
+
+if [ "$1" = "-v" -o "$1" = "--verbose" ]; then
+  VERBOSE=1
+fi
+
+if [ -z "$GLOBAL_KEEP" ]; then
+  GLOBAL_KEEP=20
+fi
+
+# Get current date/time for later use
+CUR_DATE=$(date +'%Y-%m-%d_%H%M')
+
+# Get last snapshit dir
+if [ "$USE_TAR" != "1" ]; then
+  echo "* Current snapshot date is: $CUR_DATE"
+  CUR_SNAPSHOT_DIR="${BACKUP_DIR}/snapshot_${CUR_DATE}"
+
+  LAST_SNAPSHOT_DIR="$(find "$BACKUP_DIR/" -mindepth 1 -maxdepth 1 -type d |grep -E '/snapshot_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{4}$' |sort |tail -n1)"
+  if [ -n "$LAST_SNAPSHOT_DIR" ]; then
+    echo "* Last snapshot found in $BACKUP_DIR/ is: $(basename $LAST_SNAPSHOT_DIR)"
+  else
+    echo "* No last snapshot found in $BACKUP_DIR/"
+  fi
+fi
+
+# Enable ctrl-c handler
+trap 'ctrlc_handler' 2
+
+ARCHIVE_SKIPPED=""
+REMARK_FLAG=0
+unset IFS
+for ITEM in $BACKUP_SOURCES; do
+  if [ "$ITEM" = "#" ]; then
+    REMARK_FLAG=1
+  else
+    # Check whether we need to ignore this item
+    if [ $REMARK_FLAG -ne 1 ]; then
+      SOURCE="$(echo "$ITEM" |cut -d',' -f1)"
+      OPTIONS="$(echo "$ITEM" |cut -d',' -f1 --complement -s)"
+
+      if [ ! -d "$SOURCE" ]; then
+        printf "\033[40m\033[1;31mWARNING: Directory \"$SOURCE\" does NOT exist! Skipping...\n\033[0m" >&2
+        ARCHIVE_SKIPPED="$ARCHIVE_SKIPPED $SOURCE"
+        continue
+      fi
+
+      # Name is only used for TAR
+      # Use TAR or rsync hardlinks (default), can be overwritten in config with USE_TAR=1
+      if [ "$USE_TAR" = "1" ]; then
+        tgz_files "$SOURCE" $OPTIONS
+      else
+        snapshot_files "$SOURCE" "${CUR_SNAPSHOT_DIR}${SOURCE}" $OPTIONS
+      fi
+    else
+      echo "* NOTE: Ignoring item \"$ITEM\""
+    fi
+    REMARK_FLAG=0
+  fi
+done
+
+
+# Always create a backup of the package list
+if check_command dpkg; then
+  archive_command "dpkg -l" "dpkg-list"
+elif check_command rpm; then
+  archive_command "rpm -qa" "rpm-list"
+fi
+
+# Always store system configuration
+if check_command systemctl; then
+  archive_command "systemctl list-unit-files" "systemctl-list"
+elif check_command sysv-rc-conf; then
+  archive_command "sysv-rc-conf --list" "sysv-rc-conf-list"
+elif check_command chkconfig; then
+  archive_command "chkconfig --list" "chkconfig-list"
+fi
+
+if [ "$USE_TAR" = "1" ]; then
+  echo "* Stored config backups in: $BACKUP_DIR/"
+else
+  echo "* Created config snapshot: $CUR_SNAPSHOT_DIR/"
+
+  # Reset current snapshot dir (for ctrl-c handler)
+  CUR_SNAPSHOT_DIR=""
+
+  # When snapshots are used, cleanup old folders
+  cleanup_old_snapshots "$BACKUP_DIR"
+fi
+
+if [ -n "$ARCHIVE_SKIPPED" ]; then
+  printf "\n\033[40m\033[1;31mWARNING: Source dirs ignored (not existing): $ARCHIVE_SKIPPED\n\033[0m" >&2
+fi
+
+exit 0

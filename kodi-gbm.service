@@ -1,0 +1,28 @@
+[Unit]
+Description=Kodi standalone (GBM)
+After=remote-fs.target systemd-user-sessions.service network-online.target nss-lookup.target sound.target bluetooth.target polkit.service upower.service lircd.service
+Wants=network-online.target polkit.service upower.service
+Conflicts=getty@tty1.service
+
+[Service]
+User=kodi
+Group=kodi
+PAMName=login
+TTYPath=/dev/tty1
+StandardInput=tty
+StandardOutput=journal
+TimeoutStopSec=30sec
+Restart=on-abort
+
+#EnvironmentFile=-/etc/conf.d/kodi-standalone
+Environment="WINDOWING=gbm"
+Environment="KODI_AE_SINK=alsa"
+#ExecStartPre=/usr/bin/proptest -M i915 -D /dev/dri/card0 109 connector 97 1
+ExecStart=/usr/bin/kodi-standalone --windowing=gbm
+SupplementaryGroups=input
+
+ExecStop=/usr/bin/killall --user kodi --exact --wait kodi.bin
+
+[Install]
+Alias=display-manager.service
+WantedBy=multi-user.target

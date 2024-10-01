@@ -1,0 +1,14 @@
+#!/bin/sh
+
+# Disable inputlirc on suspend
+
+case "$1" in
+  suspend|hibernate)
+ #   /etc/init.d/inputlirc stop
+    ;;
+
+  resume|thaw)
+    /etc/init.d/inputlirc restart
+    ;;
+esac
+

@@ -1,0 +1,4 @@
+# Options to be passed to inputlirc.
+EVENTS="/dev/input/mceremote"
+#EVENTS="/dev/input/event*"
+OPTIONS="-g -m 0 -c -r 200"

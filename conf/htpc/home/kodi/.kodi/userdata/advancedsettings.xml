@@ -1,0 +1,53 @@
+<advancedsettings>
+  <loglevel hide="false">3</loglevel>
+
+  <sorttokens>
+    <token>de</token>
+    <token>een</token>
+    <token>het</token>
+    <token>the</token>
+    <token>a</token>
+    <token>an</token>
+  </sorttokens>
+
+  <audio>
+    <defaultplayer>paplayer</defaultplayer>
+    <playcountminimumpercent>0</playcountminimumpercent>
+    <applydrc>0.0</applydrc>
+  </audio>
+
+  <video>
+    <subsdelayrange>15</subsdelayrange>  <!-- Delay range for subtitles, in seconds. -->
+    <audiodelayrange>10</audiodelayrange>  <!-- Delay range for audio/video sync, in seconds. -->
+    <smallstepbackseconds>7</smallstepbackseconds>  <!-- Length of the small skip back (normally the BACK button) when playing a video -->
+    <smallstepbacktries>3</smallstepbacktries>
+    <smallstepbackdelay>300</smallstepbackdelay>
+    <usetimeseeking>true</usetimeseeking>  <!-- Whether to use time based or percentage based seeking. -->
+    <timeseekforward>15</timeseekforward>  <!-- Time to seek forward in seconds when doing a short seek.  Defaults to 30. -->
+    <timeseekbackward>-15</timeseekbackward>  <!-- Time to seek backward in seconds when doing a short seek.  Defaults to -30. -->
+    <timeseekforwardbig>300</timeseekforwardbig>  <!-- Time to seek forward in seconds when doing a long seek.  Defaults to 600 (10 minutes). -->
+    <timeseekbackwardbig>-300</timeseekbackwardbig>  <!-- Time to seek forward in seconds when doing a long seek.  Defaults to -600 (10 minutes). -->
+    <ignoresecondsatstart>15</ignoresecondsatstart>
+    <ignorepercentatend>0</ignorepercentatend>
+  </video>
+
+  <replaygainavoidclipping>true</replaygainavoidclipping>
+  <replaygainnogainpreamp>89</replaygainnogainpreamp>
+  <replaygainpreamp>89</replaygainpreamp>
+
+  <cache>
+    <buffermode>4</buffermode>
+  </cache>
+
+  <network>
+    <curlclienttimeout>60</curlclienttimeout>
+    <curllowspeedtime>10</curllowspeedtime>
+    <curlretries>3</curlretries>
+  </network>
+
+  <samba>
+    <statfiles>true</statfiles>
+    <clienttimeout>30</clienttimeout>
+  </samba>
+</advancedsettings>
+

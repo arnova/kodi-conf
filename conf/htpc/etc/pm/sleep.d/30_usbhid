@@ -1,0 +1,15 @@
+#!/bin/sh
+
+# Remove the usbhid module during suspend so that it cannot generate input events directly after resume:
+
+case "$1" in
+  suspend|hibernate)
+    rmmod usbhid
+    ;;
+
+  resume|thaw)
+    modprobe usbhid
+    /usr/bin/ir-keytable --write=/etc/rc_keymaps/rc6_mce --device=/dev/input/mceremote
+    ;;
+esac
+

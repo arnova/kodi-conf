@@ -1,0 +1,27 @@
+#!/bin/sh
+
+POWER_OFF_FILE=/home/kodi/.kodi/temp/.pbc_poweroff
+LOG_FILE=/home/kodi/.kodi/temp/kodi.log
+
+WD_TIME_LAST=""
+while true; do
+  WD_TIME_CUR="$(grep -i '[service.freeze.watchdog].*Heartbeat' "$LOG_FILE" 2>/dev/null |tail -n1 |awk '{ print $NF }')"
+  echo "WD_TIME_CUR=$WD_TIME_CUR"
+  echo "WD_TIME_LAST=$WD_TIME_LAST"
+
+  if [ -n "$WD_TIME_CUR" -a -n "$WD_TIME_LAST" ]; then
+    if [ "$WD_TIME_CUR" = "$WD_TIME_LAST" ]; then
+      echo "Kodi lockup detected, restarting"
+      WD_TIME_LAST=""
+#        touch "$POWER_OFF_FILE"
+#        chown kodi:kodi "$POWER_OFF_FILE"
+#        service kodi restart
+    fi
+  fi
+
+  WD_TIME_LAST="$WD_TIME_CUR"
+
+  # Check every 2 minutes
+  sleep 120
+done
+

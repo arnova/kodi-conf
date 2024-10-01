@@ -1,0 +1,2 @@
+KERNEL=="event*", ATTRS{idProduct}=="0613", ATTR{idVendor}="0471", SYMLINK="input/mceremote", RUN+="/usr/local/sbin/ir-keytable.sh"
+

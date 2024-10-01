@@ -1,0 +1,52 @@
+<!-- This file contains the mapping of LIRC keys to XBMC keys used in Keymap.xml  -->
+<!--                                                                              -->
+<!-- How to add remotes                                                           -->
+<!-- <remote device="name_Lirc_calls_the_remote">                                 -->
+<!--                                                                              -->
+<!-- For the commands the layout following layout is used                         -->
+<!-- <XBMC_COMMAND>LircButtonName</XBMC_COMMAND>                                  -->
+<!--                                                                              -->
+<!-- For a list of XBMC_COMMAND's check out the <remote> sections of keymap.xml   -->
+
+<lircmap>
+<remote device="/dev/input/mceremote">
+  <left>KEY_LEFT</left>
+  <right>KEY_RIGHT</right>
+  <up>KEY_UP</up>
+  <down>KEY_DOWN</down>
+  <select>KEY_ENTER</select>
+  <back>KEY_BACK</back>
+  <record>KEY_RECORD</record>
+  <play>KEY_PLAY</play>
+  <play>KEY_PLAYPAUSE</play>
+  <pause>KEY_PAUSE</pause>
+  <stop>KEY_STOP</stop>
+  <stop>KEY_STOPCD</stop>
+  <forward>KEY_FASTFORWARD</forward>
+  <reverse>KEY_REWIND</reverse>
+  <volumeplus>KEY_VOLUMEUP</volumeplus>
+  <volumeminus>KEY_VOLUMEDOWN</volumeminus>
+  <channelplus>KEY_CHANNELUP</channelplus>
+  <channelminus>KEY_CHANNELDOWN</channelminus>
+  <skipplus>KEY_NEXTSONG</skipplus>
+  <skipminus>KEY_PREVIOUSSONG</skipminus>
+  <mute>KEY_MUTE</mute>
+  <power>KEY_POWER</power>
+  <one>KEY_1</one>
+  <two>KEY_2</two>
+  <three>KEY_3</three>
+  <four>KEY_4</four>
+  <five>KEY_5</five>
+  <six>KEY_6</six>
+  <seven>KEY_7</seven>
+  <eight>KEY_8</eight>
+  <nine>KEY_9</nine>
+  <zero>KEY_0</zero>
+  <menu>KEY_PROGRAM</menu>
+  <info>KEY_PROPS</info>
+  <title>KEY_ESC</title>
+  <hash>SHIFT_KEY_3</hash>
+  <asterisk>SHIFT_KEY_8</asterisk>
+</remote>
+
+</lircmap>

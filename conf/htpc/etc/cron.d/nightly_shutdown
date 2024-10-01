@@ -1,0 +1,3 @@
+# Automically power off system in case we forgot
+00 5    * * *   kodi	touch /home/kodi/.kodi/temp/.pbc_poweroff
+

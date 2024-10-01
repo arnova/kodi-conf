@@ -1,0 +1,53 @@
+#! /bin/sh
+
+echo 0 > /sys/class/rtc/rtc0/wakealarm
+echo $1 > /sys/class/rtc/rtc0/wakealarm
+
+check_log()
+{
+  local RESUME_DETECT=0
+  local RETVAL=0
+  IFS='
+'
+  while read LINE; do
+    if echo "$LINE" |grep -q -F 'KEY_POWER /dev/input/event2 (KEY_POWER)'; then
+      if [ $RESUME_DETECT -lt 10 ]; then
+        RETVAL=1
+      else
+        # Make sure we only check the last one:
+        RETVAL=0
+      fi
+    fi
+
+    if echo "$LINE" |grep -q -F 'LogindUPowerSyscall - delay lock sleep release'; then
+      RESUME_DETECT=0
+    else
+      RESUME_DETECT=$((RESUME_DETECT + 1))
+    fi
+  done < /home/kodi/.kodi/temp/kodi.log
+
+  return $RETVAL
+}
+
+
+if [ "$2" -eq 1 ]; then
+  if [ -e /tmp/tvhm_lock ]; then
+    LAST_TIME="$(cat /tmp/tvhm_lock)"
+  else
+    LAST_TIME=0
+  fi
+
+  CUR_TIME="$(date +%s)"
+
+  if [ $CUR_TIME -gt $((LAST_TIME + 60)) ]; then
+    #shutdown -h now "TVHManager shutdown the system"
+
+    #systemctl suspend
+    pm-suspend
+    date +%s > /tmp/tvhm_lock
+#    sleep 10
+  fi
+fi
+
+sleep 1
+exit 0
