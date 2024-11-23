@@ -4,23 +4,29 @@
 
 case "$1" in
   suspend|hibernate)
-    /etc/init.d/tvheadend stop
-#    sleep 2
+    if system is-active tvheadend.service; then
+      systemctl stop tvheadend.service
+#      sleep 2
 
-    rmmod em28xx_rc
-    rmmod em28xx_dvb
-    rmmod em28xx
-    rmmod si2157
-    rmmod si2168
+      rmmod em28xx_rc
+      rmmod em28xx_dvb
+      rmmod em28xx
+      rmmod si2157
+      rmmod si2168
+    fi
     ;;
 
   resume|thaw)
-    modprobe si2157
-    modprobe si2168
-    modprobe em28xx
-#    sleep 2
+    if systemctl is-enabled tvheadend.service; then
+      modprobe si2157
+      modprobe si2168
+      modprobe em28xx
+#      sleep 2
 
-    /etc/init.d/tvheadend start
+      systemctl start tvheadend.service
+    fi
     ;;
 esac
+
+exit 0
 
