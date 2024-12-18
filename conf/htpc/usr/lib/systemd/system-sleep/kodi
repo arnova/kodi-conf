@@ -1,0 +1,32 @@
+#!/bin/sh
+
+case "$1" in
+  pre)
+    if system is-active tvheadend.service --quiet; then
+      systemctl stop tvheadend.service
+#      sleep 2
+
+      rmmod em28xx_rc
+      rmmod em28xx_dvb
+      rmmod em28xx
+      rmmod si2157
+      rmmod si2168
+    fi
+    ;;
+
+  post)
+    if systemctl is-enabled tvheadend.service --quiet; then
+      modprobe si2157
+      modprobe si2168
+      modprobe em28xx
+#      sleep 2
+
+      systemctl start tvheadend.service
+    fi
+
+    /usr/bin/ir-keytable --write=/etc/rc_keymaps/rc6_mce --device=/dev/input/mceremote & 
+    ;;
+esac
+
+exit 0
+
