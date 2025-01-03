@@ -248,6 +248,15 @@
 				<align>right</align>
 				<aligny>center</aligny>
 			</control>
+			<control type="image">
+				<left>302</left>
+				<top>522</top>
+				<width>24</width>
+				<height>24</height>
+				<texture>$INFO[ListItem.Overlay]</texture>
+				<align>right</align>
+				<aligny>center</aligny>
+			</control>
 		</control>
 	</include>
 </includes>

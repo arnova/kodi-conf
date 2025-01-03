@@ -498,6 +498,13 @@
 							<height>32</height>
 							<texture>$VAR[ItemStatusIconVar]</texture>
 						</control>
+						<control type="image">
+							<left>260</left>
+							<top>30</top>
+							<width>32</width>
+							<height>32</height>
+							<texture>$INFO[ListItem.Overlay]</texture>
+						</control>
 						<control type="progress">
 							<left>20</left>
 							<top>300</top>
@@ -598,6 +605,13 @@
 							<width>32</width>
 							<height>32</height>
 							<texture>$VAR[ItemStatusIconVar]</texture>
+						</control>
+						<control type="image">
+							<left>260</left>
+							<top>30</top>
+							<width>32</width>
+							<height>32</height>
+							<texture>$INFO[ListItem.Overlay]</texture>
 						</control>
 						<control type="progress">
 							<left>20</left>
