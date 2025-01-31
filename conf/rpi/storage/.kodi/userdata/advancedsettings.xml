@@ -1,0 +1,37 @@
+<advancedsettings>
+  <useddsfanart>false</useddsfanart>
+  <fanartres>720</fanartres>
+  <imageres>720</imageres>
+
+  <video>
+    <subsdelayrange>15</subsdelayrange>
+    <audiodelayrange>10</audiodelayrange>
+    <smallstepbackseconds>7</smallstepbackseconds>
+    <smallstepbacktries>3</smallstepbacktries>
+    <smallstepbackdelay>300</smallstepbackdelay>
+    <usetimeseeking>true</usetimeseeking>
+    <timeseekforward>15</timeseekforward>
+    <timeseekbackward>-15</timeseekbackward>
+    <timeseekforwardbig>300</timeseekforwardbig>
+    <timeseekbackwardbig>-300</timeseekbackwardbig>
+    <ignoresecondsatstart>15</ignoresecondsatstart>
+    <ignorepercentatend>1</ignorepercentatend>
+  </video>
+
+  <replaygainavoidclipping>true</replaygainavoidclipping>
+  <replaygainnogainpreamp>89</replaygainnogainpreamp>
+  <replaygainpreamp>89</replaygainpreamp>
+
+  <network>
+    <curlclienttimeout>60</curlclienttimeout>
+    <curllowspeedtime>10</curllowspeedtime>
+    <curlretries>3</curlretries>
+
+    <disableipv6>true</disableipv6>
+  </network>
+
+  <samba>
+    <statfiles>true</statfiles>
+    <clienttimeout>30</clienttimeout>
+  </samba>
+</advancedsettings>

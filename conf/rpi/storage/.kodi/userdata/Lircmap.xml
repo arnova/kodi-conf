@@ -1,0 +1,40 @@
+<!-- This file contains the mapping of LIRC keys to XBMC keys used in Keymap.xml  -->
+<!--                                                                              -->
+<!-- How to add remotes                                                           -->
+<!-- <remote device="name_Lirc_calls_the_remote">                                 -->
+<!--                                                                              -->
+<!-- For the commands the layout following layout is used                         -->
+<!-- <XBMC_COMMAND>LircButtonName</XBMC_COMMAND>                                  -->
+<!--                                                                              -->
+<!-- For a list of XBMC_COMMAND's check out the <remote> sections of keymap.xml   -->
+
+<lircmap>
+        <remote device="devinput">
+                <left>KEY_LEFT</left>
+                <right>KEY_RIGHT</right>
+                <up>KEY_UP</up>
+                <down>KEY_DOWN</down>
+                <select>KEY_OK</select>
+                <start>KEY_SELECT</start>
+                <back>KEY_BACKSPACE</back>
+                <play>KEY_PLAY</play>
+				<pause>KEY_PAUSE</pause>
+                <stop>KEY_STOP</stop>
+                <menu>KEY_FASTFORWARD</menu>
+                <info>KEY_REWIND</info>
+                <volumeplus>KEY_VOLUMEUP</volumeplus>
+                <volumeminus>KEY_VOLUMEDOWN</volumeminus>
+                <display>KEY_NEXT</display>
+                <title>KEY_PREVIOUS</title>
+                <mute>KEY_MUTE</mute>
+                <power>KEY_POWER</power>
+                <menu>KEY_ESC</menu>
+                <info>KEY_ZOOM</info>
+                <title>KEY_PROGRAM</title>
+                <display>KEY_MENU</display>
+                <myvideo>KEY_INFO</myvideo>
+                <mymusic>KEY_LANGUAGE</mymusic>
+                <subtitle>KEY_SUBTITLE</subtitle>
+        </remote>
+</lircmap>
+
