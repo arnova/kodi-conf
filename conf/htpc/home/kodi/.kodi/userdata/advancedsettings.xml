@@ -28,7 +28,7 @@
     <timeseekforwardbig>300</timeseekforwardbig>  <!-- Time to seek forward in seconds when doing a long seek.  Defaults to 600 (10 minutes). -->
     <timeseekbackwardbig>-300</timeseekbackwardbig>  <!-- Time to seek forward in seconds when doing a long seek.  Defaults to -600 (10 minutes). -->
     <ignoresecondsatstart>15</ignoresecondsatstart>
-    <ignorepercentatend>0</ignorepercentatend>
+    <ignorepercentatend>1</ignorepercentatend>
   </video>
 
   <replaygainavoidclipping>true</replaygainavoidclipping>
