@@ -13,7 +13,8 @@ PAMName=login
 #StandardInput=tty
 StandardOutput=journal
 TimeoutStopSec=30sec
-Restart=on-abnormal
+#Restart=on-abnormal
+Restart=always
 Type=simple
 
 #EnvironmentFile=-/etc/conf.d/kodi-standalone
